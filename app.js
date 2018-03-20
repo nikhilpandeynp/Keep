@@ -1,39 +1,27 @@
-var port = process.env.PORT || 3000,
-    http = require('http'),
-    fs = require('fs'),
-    html = fs.readFileSync('index.html');
+var express = require('express');
+var app = express();
+var morgan = require('morgan');
+var bodyParser = require('body-parser');
+var port = process.env.PORT || 3000;
+var methodOverride = require('method-override'); // simulate DELETE and PUT (express4)
+var router = express.Router();
 
-var log = function(entry) {
-    fs.appendFileSync('/tmp/sample-app.log', new Date().toISOString() + ' - ' + entry + '\n');
-};
+console.log('——————————- Run on port '+ port);
 
-var server = http.createServer(function (req, res) {
-    if (req.method === 'POST') {
-        var body = '';
-
-        req.on('data', function(chunk) {
-            body += chunk;
-        });
-
-        req.on('end', function() {
-            if (req.url === '/') {
-                log('Received message: ' + body);
-            } else if (req.url = '/scheduled') {
-                log('Received task ' + req.headers['x-aws-sqsd-taskname'] + ' scheduled at ' + req.headers['x-aws-sqsd-scheduled-at']);
-            }
-
-            res.writeHead(200, 'OK', {'Content-Type': 'text/plain'});
-            res.end();
-        });
-    } else {
-        res.writeHead(200);
-        res.write(html);
-        res.end();
-    }
+/****************************** Router ***************************/
+router.get('*', function(req, res){
+    res.sendFile('index.html', { root: __dirname + '/dist/' });
 });
 
-// Listen on port 3000, IP defaults to 127.0.0.1
-server.listen(port);
+/****************************** /Router ***************************/
 
-// Put a friendly message on the terminal
-console.log('Server running at http://127.0.0.1:' + port + '/');
+//app.use(morgan('dev')); // log every request to the console
+app.use(express.static(__dirname + '/dist/')); // Static (public) folder
+
+app.use(bodyParser.urlencoded({extended:true}));// get information from html forms
+app.use(bodyParser.json());
+app.use(bodyParser.json({ type: 'application/vnd.api+json' }));
+app.use(methodOverride());
+app.use('/', router); // app.use('/parent', router); call all from localhost:port/parent/*
+
+app.listen(port);
